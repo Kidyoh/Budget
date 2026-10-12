@@ -34,10 +34,10 @@ class ExpenseTile extends ConsumerWidget {
         'due ${relativeDay(expense.dueDate!, now: now).toLowerCase()}',
     ].join(' · ');
 
-    return InkWell(
+    return Pressable(
       onTap: () => openExpenseDetail(context, expense.id),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         child: Row(
           children: [
             IconBadge(
@@ -103,7 +103,7 @@ class ExpenseTile extends ConsumerWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(money.short(expense.amount), style: text.titleSmall),
+                Text('–${money.short(expense.amount)}', style: text.titleSmall),
                 const SizedBox(height: 4),
                 StatusPill(
                   label: status.label,

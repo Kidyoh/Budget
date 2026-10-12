@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/design.dart';
 import '../../core/formatters.dart';
 import '../../core/visuals.dart';
 import '../../core/widgets/common.dart';
@@ -33,7 +35,6 @@ class _TasksTabState extends ConsumerState<TasksTab> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
     return AsyncView(
@@ -68,25 +69,24 @@ class _TasksTabState extends ConsumerState<TasksTab> {
           );
         final progress = tasks.isEmpty ? 0.0 : done.length / tasks.length;
 
-        Widget group(String title, List<EventTask> items, {Color? color}) {
+        Widget group(String title, List<EventTask> items) {
           if (items.isEmpty) return const SizedBox.shrink();
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SectionHeader(
-                '$title · ${items.length}',
-                padding: const EdgeInsets.fromLTRB(4, 18, 4, 8),
-              ),
-              Card(
+              SectionHeader('$title · ${items.length}'),
+              Panel(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 child: Column(
                   children: [
                     for (var i = 0; i < items.length; i++) ...[
-                      if (i > 0) const Divider(height: 1, indent: 56),
+                      if (i > 0) const Divider(indent: 60, endIndent: 16),
                       _TaskTile(
+                        key: ValueKey(items[i].id),
                         task: items[i],
                         now: now,
                         onDelete: () => _delete(items[i]),
-                      ),
+                      ).enter(i),
                     ],
                   ],
                 ),
@@ -96,72 +96,72 @@ class _TasksTabState extends ConsumerState<TasksTab> {
         }
 
         return ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 104),
+          padding: const EdgeInsets.fromLTRB(
+            Insets.page,
+            12,
+            Insets.page,
+            Insets.navClearance,
+          ),
           children: [
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 52,
-                      height: 52,
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          CircularProgressIndicator(
-                            value: progress,
-                            strokeWidth: 6,
-                            strokeCap: StrokeCap.round,
-                            backgroundColor: scheme.surfaceContainerHighest,
-                          ),
-                          Center(
-                            child: Text(
-                              '${(progress * 100).round()}%',
-                              style: text.labelMedium,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${done.length} of ${tasks.length} tasks done',
-                            style: text.titleSmall,
-                          ),
-                          Text(
-                            overdue.isEmpty
-                                ? '${open.length} still to do'
-                                : '${overdue.length} overdue · ${open.length} still to do',
-                            style: text.bodySmall?.copyWith(
-                              color: overdue.isEmpty
-                                  ? scheme.onSurfaceVariant
-                                  : StatusColors.danger,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: _showCompleted
-                          ? 'Hide completed'
-                          : 'Show completed',
-                      onPressed: () =>
-                          setState(() => _showCompleted = !_showCompleted),
-                      icon: Icon(
-                        _showCompleted
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                      ),
-                    ),
-                  ],
-                ),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: context.highlight,
+                borderRadius: BorderRadius.circular(Insets.radius),
               ),
-            ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${done.length} of ${tasks.length} tasks done',
+                          style: text.titleMedium?.copyWith(
+                            color: inkOnHighlight,
+                          ),
+                        ),
+                      ),
+                      Pressable(
+                        onTap: () =>
+                            setState(() => _showCompleted = !_showCompleted),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 7,
+                          ),
+                          decoration: BoxDecoration(
+                            color: inkOnHighlight,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            _showCompleted ? 'Hide done' : 'Show done',
+                            style: text.labelMedium?.copyWith(
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    '${(progress * 100).round()}%',
+                    style: text.displayMedium?.copyWith(color: inkOnHighlight),
+                  ),
+                  Text(
+                    overdue.isEmpty
+                        ? '${open.length} still to do'
+                        : '${overdue.length} overdue · ${open.length} still to do',
+                    style: text.bodyMedium?.copyWith(
+                      color: inkOnHighlight.withValues(alpha: 0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  DotsProgress(value: progress, count: 18),
+                ],
+              ),
+            ).enter(),
             group('Overdue', overdue),
             group('Upcoming', upcoming),
             group('Anytime', anytime),
@@ -175,6 +175,7 @@ class _TasksTabState extends ConsumerState<TasksTab> {
 
 class _TaskTile extends ConsumerWidget {
   const _TaskTile({
+    super.key,
     required this.task,
     required this.now,
     required this.onDelete,
@@ -186,66 +187,146 @@ class _TaskTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
+    final t = context.tokens;
+    final text = context.text;
     final overdue = task.isOverdue(now);
+    final details = [
+      if (task.dueDate != null)
+        '${formatShortDate(task.dueDate!)} · ${relativeDay(task.dueDate!, now: now)}',
+      if (task.notes.isNotEmpty) task.notes,
+    ].join('\n');
 
     return Dismissible(
-      key: ValueKey(task.id),
+      key: ValueKey('dismiss-${task.id}'),
       direction: DismissDirection.endToStart,
       background: Container(
         alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        color: scheme.errorContainer,
-        child: Icon(
+        padding: const EdgeInsets.only(right: 24),
+        decoration: BoxDecoration(
+          color: StatusColors.danger.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(Insets.smallRadius),
+        ),
+        child: const Icon(
           Icons.delete_outline_rounded,
-          color: scheme.onErrorContainer,
+          color: StatusColors.danger,
         ),
       ),
       onDismissed: (_) => onDelete(),
-      child: ListTile(
-        contentPadding: const EdgeInsets.fromLTRB(4, 2, 12, 2),
+      child: Pressable(
         onTap: () =>
             showTaskForm(context, ref, eventId: task.eventId, task: task),
-        leading: Checkbox(
-          value: task.isDone,
-          shape: const CircleBorder(),
-          onChanged: (_) =>
-              ref.read(taskDaoProvider).update(task.toggled(DateTime.now())),
-        ),
-        title: Text(
-          task.title,
-          style: text.bodyLarge?.copyWith(
-            decoration: task.isDone ? TextDecoration.lineThrough : null,
-            color: task.isDone ? scheme.onSurfaceVariant : null,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 14, 12),
+          child: Row(
+            crossAxisAlignment: details.isEmpty
+                ? CrossAxisAlignment.center
+                : CrossAxisAlignment.start,
+            children: [
+              CheckCircle(
+                done: task.isDone,
+                color: priorityColor(task.priority),
+                onTap: () => ref
+                    .read(taskDaoProvider)
+                    .update(task.toggled(DateTime.now())),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AnimatedDefaultTextStyle(
+                      duration: const Duration(milliseconds: 250),
+                      style: text.bodyLarge!.copyWith(
+                        decoration: task.isDone
+                            ? TextDecoration.lineThrough
+                            : null,
+                        color: task.isDone ? t.faint : t.ink,
+                      ),
+                      child: Text(task.title),
+                    ),
+                    if (details.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        details,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: text.bodySmall?.copyWith(
+                          color: overdue ? StatusColors.danger : t.muted,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (!task.isDone)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8, top: 2),
+                  child: StatusPill(
+                    label: task.priority.label,
+                    color: priorityColor(task.priority),
+                  ),
+                ),
+            ],
           ),
         ),
-        subtitle: (task.dueDate == null && task.notes.isEmpty)
-            ? null
-            : Text(
-                [
-                  if (task.dueDate != null)
-                    '${formatShortDate(task.dueDate!)} · ${relativeDay(task.dueDate!, now: now)}',
-                  if (task.notes.isNotEmpty) task.notes,
-                ].join('\n'),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: text.bodySmall?.copyWith(
-                  color: overdue
-                      ? StatusColors.danger
-                      : scheme.onSurfaceVariant,
-                ),
+      ),
+    );
+  }
+}
+
+/// A round checkbox that fills with the highlight colour and pops when
+/// ticked. Its ring takes the task's priority colour while open.
+class CheckCircle extends StatelessWidget {
+  const CheckCircle({
+    super.key,
+    required this.done,
+    required this.color,
+    required this.onTap,
+  });
+
+  final bool done;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      checked: done,
+      label: done ? 'Mark not done' : 'Mark done',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          HapticFeedback.mediumImpact();
+          onTap();
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(2),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeOutBack,
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: done ? context.highlight : Colors.transparent,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: done ? context.highlight : color,
+                width: 2,
               ),
-        trailing: task.isDone
-            ? null
-            : Tooltip(
-                message: '${task.priority.label} priority',
-                child: Icon(
-                  Icons.flag_rounded,
-                  size: 18,
-                  color: priorityColor(task.priority),
-                ),
+            ),
+            child: AnimatedScale(
+              scale: done ? 1 : 0,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOutBack,
+              child: const Icon(
+                Icons.check_rounded,
+                size: 18,
+                color: inkOnHighlight,
               ),
+            ),
+          ),
+        ),
       ),
     );
   }

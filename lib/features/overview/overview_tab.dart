@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/design.dart';
 import '../../core/formatters.dart';
 import '../../core/visuals.dart';
 import '../../core/widgets/charts.dart';
@@ -9,64 +11,57 @@ import '../../data/event_overview.dart';
 import '../../data/models/models.dart';
 import '../../state/providers.dart';
 import '../../state/settings.dart';
+import '../budget/category_form.dart';
 import '../events/event_detail_screen.dart';
 import '../expenses/expense_detail_screen.dart';
+import '../expenses/expense_form_screen.dart';
+import '../guests/guest_form.dart';
+import '../notes/note_editor_screen.dart';
+import '../tasks/task_form.dart';
 
 class OverviewTab extends ConsumerWidget {
-  const OverviewTab({
-    super.key,
-    required this.eventId,
-    required this.onOpenTab,
-  });
+  const OverviewTab({super.key, required this.eventId, required this.onOpen});
 
   final String eventId;
-  final ValueChanged<int> onOpenTab;
+  final OpenSection onOpen;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return AsyncView(
       value: ref.watch(overviewProvider(eventId)),
-      data: (overview) {
-        if (overview == null) return const SizedBox.shrink();
+      data: (o) {
+        if (o == null) return const SizedBox.shrink();
+        var i = 0;
         return ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 104),
+          padding: const EdgeInsets.fromLTRB(
+            Insets.page,
+            4,
+            Insets.page,
+            Insets.navClearance,
+          ),
           children: [
-            _HeroCard(overview: overview),
-            const SizedBox(height: 12),
-            _BudgetCard(overview: overview, onOpenTab: onOpenTab),
-            _Alerts(overview: overview, onOpenTab: onOpenTab),
-            SectionHeader(
-              'Spending by category',
-              trailing: TextButton(
-                onPressed: () => onOpenTab(EventTabs.budget),
-                child: const Text('Budget'),
-              ),
-            ),
-            _CategoryBreakdown(overview: overview),
+            _Title(o: o).enter(i++),
+            const SizedBox(height: 18),
+            _HeroCard(o: o).enter(i++),
+            const SizedBox(height: 22),
+            _QuickActions(eventId: eventId).enter(i++),
+            const SizedBox(height: 22),
+            _StatCards(o: o).enter(i++),
+            _Attention(o: o, onOpen: onOpen),
             SectionHeader(
               'Upcoming payments',
-              trailing: TextButton(
-                onPressed: () => onOpenTab(EventTabs.expenses),
-                child: const Text('All expenses'),
-              ),
+              onSeeAll: () =>
+                  onOpen(EventSection.money, money: MoneyView.expenses),
             ),
-            _UpcomingPayments(overview: overview),
+            _Payments(o: o).enter(i++),
+            SectionHeader('Tasks', onSeeAll: () => onOpen(EventSection.tasks)),
+            _Tasks(o: o).enter(i++),
             SectionHeader(
-              'Tasks',
-              trailing: TextButton(
-                onPressed: () => onOpenTab(EventTabs.tasks),
-                child: const Text('All tasks'),
-              ),
+              'Guests',
+              onSeeAll: () =>
+                  onOpen(EventSection.people, people: PeopleView.guests),
             ),
-            _TaskSummary(overview: overview),
-            SectionHeader(
-              'Guests & vendors',
-              trailing: TextButton(
-                onPressed: () => onOpenTab(EventTabs.guests),
-                child: const Text('Guest list'),
-              ),
-            ),
-            _PeopleSummary(overview: overview, onOpenTab: onOpenTab),
+            _Guests(o: o, onOpen: onOpen).enter(i++),
           ],
         );
       },
@@ -74,80 +69,354 @@ class OverviewTab extends ConsumerWidget {
   }
 }
 
-class _HeroCard extends StatelessWidget {
-  const _HeroCard({required this.overview});
+class _Title extends StatelessWidget {
+  const _Title({required this.o});
 
-  final EventOverview overview;
+  final EventOverview o;
 
   @override
   Widget build(BuildContext context) {
-    final event = overview.event;
-    final color = Color(event.colorValue);
-    final text = Theme.of(context).textTheme;
-    final days = overview.daysUntil;
-    final ongoing = days <= 0 && !event.isPast(overview.now);
+    final e = o.event;
+    final t = context.tokens;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: visible(Color(e.colorValue), context),
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                [
+                  '${e.type.label} · ${e.status.label}',
+                  if (e.location.isNotEmpty) e.location,
+                ].join(' · '),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: context.text.labelMedium?.copyWith(color: t.muted),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(e.name, style: context.text.headlineMedium),
+        const SizedBox(height: 2),
+        Text(
+          formatDateRange(e.startDate, e.endDate),
+          style: context.text.bodyMedium?.copyWith(color: t.muted),
+        ),
+      ],
+    );
+  }
+}
 
-    final (big, small) = event.isPast(overview.now)
-        ? ('Done', 'event finished')
-        : ongoing
-        ? ('Today', 'it’s happening')
-        : ('$days', days == 1 ? 'day to go' : 'days to go');
+class _HeroCard extends ConsumerWidget {
+  const _HeroCard({required this.o});
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: LinearGradient(
-          colors: [color, Color.lerp(color, Colors.black, 0.35)!],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+  final EventOverview o;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final money = ref.watch(moneyProvider);
+    final bg = context.heroBg;
+    final fg = context.onHero;
+    final pillBg = context.isDark ? inkOnHighlight : context.highlight;
+    final pillFg = context.isDark ? context.highlight : inkOnHighlight;
+    final days = o.daysUntil;
+    final past = o.event.isPast(o.now);
+    final text = context.text;
+
+    return Hero(
+      tag: 'event-card-${o.event.id}',
+      flightShuttleBuilder: (_, _, _, _, _) => Container(
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(Insets.radius),
         ),
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(Insets.radius),
+        ),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 8, 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        o.isOverBudget ? 'Over budget by' : 'Remaining budget',
+                        style: text.labelMedium?.copyWith(
+                          color: fg.withValues(alpha: 0.65),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      BigAmount(
+                        o.remaining.abs(),
+                        style: text.displaySmall,
+                        color: fg,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'of ${money.format(o.budget)} · ${(o.usedFraction * 100).round()}% committed',
+                        style: text.bodySmall?.copyWith(
+                          color: fg.withValues(alpha: 0.65),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      SpendBar(
+                        paid: o.paid,
+                        unpaid: o.outstanding,
+                        budget: o.budget,
+                        paidColor: fg,
+                        unpaidColor: context.isDark
+                            ? Colors.white
+                            : context.highlight,
+                        hatchColor: fg.withValues(alpha: 0.35),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 14,
+                        runSpacing: 4,
+                        children: [
+                          _Legend(
+                            color: fg,
+                            label: 'Paid ${money.compact(o.paid)}',
+                            fg: fg,
+                          ),
+                          _Legend(
+                            color: context.isDark
+                                ? Colors.white
+                                : context.highlight,
+                            label: 'Unpaid ${money.compact(o.outstanding)}',
+                            fg: fg,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Container(
+                width: 74,
+                decoration: BoxDecoration(
+                  color: pillBg,
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Icon(
-                      eventTypeIcon(event.type),
-                      color: Colors.white70,
-                      size: 18,
+                      Icons.hourglass_bottom_rounded,
+                      color: pillFg,
+                      size: 20,
                     ),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        '${event.type.label} · ${event.status.label}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: text.labelLarge?.copyWith(color: Colors.white70),
-                      ),
+                    Column(
+                      children: [
+                        FittedBox(
+                          child: Text(
+                            past ? '✓' : (days <= 0 ? '0' : '$days'),
+                            style: text.headlineMedium?.copyWith(color: pillFg),
+                          ),
+                        ),
+                        Text(
+                          past
+                              ? 'done'
+                              : days <= 0
+                              ? 'today'
+                              : days == 1
+                              ? 'day'
+                              : 'days',
+                          style: text.labelSmall?.copyWith(
+                            color: pillFg.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ],
                     ),
+                    Icon(Icons.north_east_rounded, color: pillFg, size: 20),
                   ],
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  formatDateRange(event.startDate, event.endDate),
-                  style: text.titleMedium?.copyWith(color: Colors.white),
-                ),
-                if (event.location.isNotEmpty) ...[
-                  const SizedBox(height: 4),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Legend extends StatelessWidget {
+  const _Legend({required this.color, required this.label, required this.fg});
+
+  final Color color;
+  final String label;
+  final Color fg;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: context.text.labelSmall?.copyWith(
+            color: fg.withValues(alpha: 0.8),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _QuickActions extends ConsumerWidget {
+  const _QuickActions({required this.eventId});
+
+  final String eventId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        ActionCircle(
+          icon: Icons.receipt_long_rounded,
+          label: 'Expense',
+          highlighted: true,
+          onTap: () => openExpenseForm(context, eventId: eventId),
+        ),
+        ActionCircle(
+          icon: Icons.donut_small_rounded,
+          label: 'Category',
+          onTap: () => showCategoryForm(context, ref, eventId: eventId),
+        ),
+        ActionCircle(
+          icon: Icons.add_task_rounded,
+          label: 'Task',
+          onTap: () => showTaskForm(context, ref, eventId: eventId),
+        ),
+        ActionCircle(
+          icon: Icons.person_add_alt_1_rounded,
+          label: 'Guest',
+          onTap: () => showGuestForm(context, ref, eventId: eventId),
+        ),
+        ActionCircle(
+          icon: Icons.edit_note_rounded,
+          label: 'Note',
+          onTap: () => openNoteEditor(context, eventId: eventId),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatCards extends ConsumerWidget {
+  const _StatCards({required this.o});
+
+  final EventOverview o;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final text = context.text;
+    final paidShare = o.committed <= 0 ? 0.0 : o.paid / o.committed;
+    final darkCard = context.isDark ? context.tokens.card : heroInk;
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: context.highlight,
+                borderRadius: BorderRadius.circular(Insets.smallRadius + 4),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _CardChip(
+                    icon: Icons.trending_up_rounded,
+                    label: 'Committed',
+                    dark: false,
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    '${(o.usedFraction * 100).round()}%',
+                    style: text.displaySmall?.copyWith(color: inkOnHighlight),
+                  ),
+                  Text(
+                    'of the budget is spoken for',
+                    style: text.bodySmall?.copyWith(
+                      color: inkOnHighlight.withValues(alpha: 0.7),
+                    ),
+                  ),
+                  const Spacer(),
+                  const SizedBox(height: 14),
+                  DotsProgress(value: o.usedFraction, count: 12),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: darkCard,
+                borderRadius: BorderRadius.circular(Insets.smallRadius + 4),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const _CardChip(
+                    icon: Icons.payments_outlined,
+                    label: 'Paid',
+                    dark: true,
+                  ),
+                  const SizedBox(height: 14),
+                  BigAmount(
+                    o.paid,
+                    style: text.headlineSmall,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
-                      const Icon(
-                        Icons.place_outlined,
-                        color: Colors.white70,
-                        size: 16,
+                      SizedBox(
+                        width: 44,
+                        height: 44,
+                        child: ProgressRing(
+                          value: paidShare,
+                          color: context.highlight,
+                          size: 44,
+                          strokeWidth: 6,
+                        ),
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          event.location,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: text.bodyMedium?.copyWith(
+                          '${(paidShare * 100).round()}% of what you owe is paid',
+                          style: text.bodySmall?.copyWith(
                             color: Colors.white70,
                           ),
                         ),
@@ -155,169 +424,6 @@ class _HeroCard extends StatelessWidget {
                     ],
                   ),
                 ],
-                if (event.description.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  Text(
-                    event.description,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: text.bodySmall?.copyWith(color: Colors.white),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Container(
-            width: 92,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Column(
-              children: [
-                FittedBox(
-                  child: Text(
-                    big,
-                    style: text.headlineMedium?.copyWith(color: Colors.white),
-                  ),
-                ),
-                Text(
-                  small,
-                  textAlign: TextAlign.center,
-                  style: text.labelSmall?.copyWith(color: Colors.white70),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BudgetCard extends ConsumerWidget {
-  const _BudgetCard({required this.overview, required this.onOpenTab});
-
-  final EventOverview overview;
-  final ValueChanged<int> onOpenTab;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final money = ref.watch(moneyProvider);
-    final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
-    final fraction = overview.usedFraction;
-    final ringColor = usageColor(fraction, scheme);
-
-    return Card(
-      child: InkWell(
-        onTap: () => onOpenTab(EventTabs.budget),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              ProgressRing(
-                value: fraction,
-                color: ringColor,
-                size: 128,
-                strokeWidth: 13,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      overview.budget <= 0
-                          ? '—'
-                          : '${(fraction * 100).round()}%',
-                      style: text.headlineSmall?.copyWith(color: ringColor),
-                    ),
-                    Text(
-                      'used',
-                      style: text.labelSmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 20),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _Figure(
-                      label: 'Budget',
-                      value: money.short(overview.budget),
-                    ),
-                    _Figure(
-                      label: 'Committed',
-                      value: money.short(overview.committed),
-                    ),
-                    _Figure(
-                      label: 'Paid',
-                      value: money.short(overview.paid),
-                      color: StatusColors.success,
-                    ),
-                    _Figure(
-                      label: overview.remaining >= 0
-                          ? 'Remaining'
-                          : 'Over budget',
-                      value: money.short(overview.remaining.abs()),
-                      color: overview.remaining >= 0
-                          ? scheme.primary
-                          : StatusColors.danger,
-                      emphasise: true,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Figure extends StatelessWidget {
-  const _Figure({
-    required this.label,
-    required this.value,
-    this.color,
-    this.emphasise = false,
-  });
-
-  final String label;
-  final String value;
-  final Color? color;
-  final bool emphasise;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-          ),
-          Flexible(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerRight,
-              child: Text(
-                value,
-                style: (emphasise ? text.titleMedium : text.bodyLarge)
-                    ?.copyWith(
-                      color: color,
-                      fontWeight: emphasise ? FontWeight.w700 : FontWeight.w600,
-                    ),
               ),
             ),
           ),
@@ -327,260 +433,379 @@ class _Figure extends StatelessWidget {
   }
 }
 
-class _Alerts extends ConsumerWidget {
-  const _Alerts({required this.overview, required this.onOpenTab});
-
-  final EventOverview overview;
-  final ValueChanged<int> onOpenTab;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final money = ref.watch(moneyProvider);
-    final alerts = <Widget>[
-      if (overview.isOverBudget)
-        _AlertTile(
-          icon: Icons.warning_amber_rounded,
-          color: StatusColors.danger,
-          text:
-              'Committed spending is ${money.short(-overview.remaining)} over the total budget.',
-          onTap: () => onOpenTab(EventTabs.budget),
-        ),
-      if (overview.overBudgetCategories.isNotEmpty)
-        _AlertTile(
-          icon: Icons.pie_chart_rounded,
-          color: StatusColors.warning,
-          text: overview.overBudgetCategories.length == 1
-              ? '${overview.overBudgetCategories.first.category.name} is over its allocation.'
-              : '${overview.overBudgetCategories.length} categories are over their allocation.',
-          onTap: () => onOpenTab(EventTabs.budget),
-        ),
-      if (overview.overdueExpenses.isNotEmpty)
-        _AlertTile(
-          icon: Icons.schedule_rounded,
-          color: StatusColors.danger,
-          text: overview.overdueExpenses.length == 1
-              ? '1 payment is overdue.'
-              : '${overview.overdueExpenses.length} payments are overdue.',
-          onTap: () => onOpenTab(EventTabs.expenses),
-        ),
-      if (overview.overdueTasks.isNotEmpty)
-        _AlertTile(
-          icon: Icons.assignment_late_outlined,
-          color: StatusColors.warning,
-          text: overview.overdueTasks.length == 1
-              ? '1 task is past its due date.'
-              : '${overview.overdueTasks.length} tasks are past their due date.',
-          onTap: () => onOpenTab(EventTabs.tasks),
-        ),
-    ];
-    if (alerts.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(top: 12),
-      child: Column(
-        children: [
-          for (final a in alerts)
-            Padding(padding: const EdgeInsets.only(bottom: 8), child: a),
-        ],
-      ),
-    );
-  }
-}
-
-class _AlertTile extends StatelessWidget {
-  const _AlertTile({
+class _CardChip extends StatelessWidget {
+  const _CardChip({
     required this.icon,
-    required this.color,
-    required this.text,
-    required this.onTap,
+    required this.label,
+    required this.dark,
   });
 
   final IconData icon;
-  final Color color;
-  final String text;
-  final VoidCallback onTap;
+  final String label;
+  final bool dark;
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Material(
-      color: color.withValues(alpha: isDark ? 0.2 : 0.1),
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Row(
+    final fg = dark ? Colors.white : inkOnHighlight;
+    return Row(
+      children: [
+        Container(
+          width: 30,
+          height: 30,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: fg.withValues(alpha: 0.5)),
+          ),
+          child: Icon(icon, size: 16, color: fg),
+        ),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: context.text.labelLarge?.copyWith(color: fg),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Attention extends ConsumerWidget {
+  const _Attention({required this.o, required this.onOpen});
+
+  final EventOverview o;
+  final OpenSection onOpen;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final money = ref.watch(moneyProvider);
+    final items = <(IconData, Color, String, VoidCallback)>[
+      if (o.isOverBudget)
+        (
+          Icons.warning_amber_rounded,
+          StatusColors.danger,
+          'Spending is ${money.short(-o.remaining)} over the total budget',
+          () => onOpen(EventSection.money, money: MoneyView.budget),
+        ),
+      if (o.overBudgetCategories.isNotEmpty)
+        (
+          Icons.donut_small_rounded,
+          StatusColors.warning,
+          o.overBudgetCategories.length == 1
+              ? '${o.overBudgetCategories.first.category.name} is over its allocation'
+              : '${o.overBudgetCategories.length} categories are over their allocation',
+          () => onOpen(EventSection.money, money: MoneyView.budget),
+        ),
+      if (o.overdueExpenses.isNotEmpty)
+        (
+          Icons.schedule_rounded,
+          StatusColors.danger,
+          o.overdueExpenses.length == 1
+              ? '1 payment is overdue'
+              : '${o.overdueExpenses.length} payments are overdue',
+          () => onOpen(EventSection.money, money: MoneyView.expenses),
+        ),
+      if (o.overdueTasks.isNotEmpty)
+        (
+          Icons.assignment_late_outlined,
+          StatusColors.warning,
+          o.overdueTasks.length == 1
+              ? '1 task is past its due date'
+              : '${o.overdueTasks.length} tasks are past their due date',
+          () => onOpen(EventSection.tasks),
+        ),
+    ];
+    if (items.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SectionHeader('Needs attention'),
+        Panel(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+          child: Column(
             children: [
-              Icon(
-                icon,
-                color: isDark ? Color.lerp(color, Colors.white, 0.4) : color,
-              ),
-              const SizedBox(width: 12),
-              Expanded(child: Text(text)),
-              const Icon(Icons.chevron_right_rounded),
+              for (final (icon, color, label, onTap) in items)
+                Pressable(
+                  onTap: onTap,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 10,
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: color.withValues(
+                              alpha: context.isDark ? 0.25 : 0.14,
+                            ),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            icon,
+                            size: 20,
+                            color: legibleStatus(color, context),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(label, style: context.text.bodyMedium),
+                        ),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          color: context.tokens.faint,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
-      ),
+      ],
     );
   }
 }
 
-class _CategoryBreakdown extends ConsumerWidget {
-  const _CategoryBreakdown({required this.overview});
+Color legibleStatus(Color color, BuildContext context) =>
+    context.isDark ? Color.lerp(color, Colors.white, 0.4)! : color;
 
-  final EventOverview overview;
+class _Payments extends ConsumerWidget {
+  const _Payments({required this.o});
+
+  final EventOverview o;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final money = ref.watch(moneyProvider);
-    final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
-
-    final spent = overview.categories.where((c) => c.committed > 0).toList()
-      ..sort((a, b) => b.committed.compareTo(a.committed));
-    final top = spent.take(5).toList();
-    final rest =
-        spent.skip(5).fold<double>(0, (s, c) => s + c.committed) +
-        overview.uncategorised;
-
-    final legend = <(String, double, Color)>[
-      for (final c in top)
-        (c.category.name, c.committed, Color(c.category.colorValue)),
-      if (rest > 0) ('Other', rest, scheme.outline),
-    ];
-
-    if (legend.isEmpty) {
-      return const Card(
-        child: Padding(
-          padding: EdgeInsets.all(20),
-          child: Text(
-            'No expenses yet. Add one and it will show up here by category.',
-          ),
+    final upcoming = o.upcomingPayments.take(4).toList();
+    final t = context.tokens;
+    if (upcoming.isEmpty) {
+      return Panel(
+        child: Text(
+          'Nothing due. Expenses with a due date and a balance left appear here.',
+          style: context.text.bodyMedium?.copyWith(color: t.muted),
         ),
       );
     }
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            DonutChart(
-              size: 132,
-              strokeWidth: 20,
-              slices: [
-                for (final l in legend) DonutSlice(value: l.$2, color: l.$3),
-              ],
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Total',
-                    style: text.labelSmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 26),
-                    child: FittedBox(
-                      child: Text(
-                        money.compact(overview.committed),
-                        style: text.titleMedium,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 20),
-            Expanded(
-              child: Column(
-                children: [
-                  for (final (name, value, color) in legend)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 10,
-                            height: 10,
-                            decoration: BoxDecoration(
-                              color: color,
-                              shape: BoxShape.circle,
-                            ),
+    final categories = {
+      for (final c in o.categories) c.category.id: c.category,
+    };
+    return Panel(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Column(
+        children: [
+          for (var i = 0; i < upcoming.length; i++) ...[
+            if (i > 0) Divider(color: t.border),
+            Pressable(
+              onTap: () => openExpenseDetail(context, upcoming[i].id),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Builder(
+                  builder: (context) {
+                    final e = upcoming[i];
+                    final c = categories[e.categoryId];
+                    final overdue = e.statusAt(o.now) == PaymentStatus.overdue;
+                    return Row(
+                      children: [
+                        _DateBlock(date: e.dueDate!, overdue: overdue),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                e.title,
+                                style: context.text.titleSmall,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  Icon(
+                                    categoryIcon(c?.iconKey),
+                                    size: 13,
+                                    color: t.muted,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    child: Text(
+                                      '${c?.name ?? 'Uncategorised'} · ${relativeDay(e.dueDate!, now: o.now)}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: context.text.bodySmall?.copyWith(
+                                        color: overdue
+                                            ? legibleStatus(
+                                                StatusColors.danger,
+                                                context,
+                                              )
+                                            : t.muted,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: text.bodySmall,
-                            ),
-                          ),
-                          Text(money.compact(value), style: text.labelMedium),
-                        ],
-                      ),
-                    ),
-                ],
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '–${money.format(e.outstanding)}',
+                          style: context.text.titleSmall,
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
           ],
-        ),
+        ],
       ),
     );
   }
 }
 
-class _UpcomingPayments extends ConsumerWidget {
-  const _UpcomingPayments({required this.overview});
+/// A calendar-leaf style date: day number over a short month.
+class _DateBlock extends StatelessWidget {
+  const _DateBlock({required this.date, required this.overdue});
 
-  final EventOverview overview;
+  final DateTime date;
+  final bool overdue;
+
+  @override
+  Widget build(BuildContext context) {
+    const months = [
+      'JAN',
+      'FEB',
+      'MAR',
+      'APR',
+      'MAY',
+      'JUN',
+      'JUL',
+      'AUG',
+      'SEP',
+      'OCT',
+      'NOV',
+      'DEC',
+    ];
+    final bg = overdue
+        ? StatusColors.danger.withValues(alpha: 0.15)
+        : context.tokens.track;
+    final fg = overdue
+        ? legibleStatus(StatusColors.danger, context)
+        : context.tokens.ink;
+    return Container(
+      width: 48,
+      height: 52,
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            '${date.day}',
+            style: context.text.titleMedium?.copyWith(color: fg, height: 1.1),
+          ),
+          Text(
+            months[date.month - 1],
+            style: context.text.labelSmall?.copyWith(color: fg, fontSize: 9.5),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Tasks extends ConsumerWidget {
+  const _Tasks({required this.o});
+
+  final EventOverview o;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final money = ref.watch(moneyProvider);
-    final scheme = Theme.of(context).colorScheme;
-    final upcoming = overview.upcomingPayments.take(4).toList();
-    if (upcoming.isEmpty) {
-      return const Card(
-        child: Padding(
-          padding: EdgeInsets.all(20),
-          child: Text(
-            'Nothing due. Expenses with a due date and a balance left to pay appear here.',
-          ),
+    final t = context.tokens;
+    if (o.taskCount == 0) {
+      return Panel(
+        child: Text(
+          'No tasks yet. Build a checklist so nothing slips.',
+          style: context.text.bodyMedium?.copyWith(color: t.muted),
         ),
       );
     }
-    return Card(
+    return Panel(
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          for (final e in upcoming)
-            ListTile(
-              onTap: () => openExpenseDetail(context, e.id),
-              leading: IconBadge(
-                icon: Icons.event_note_rounded,
-                color: paymentStatusColor(e.statusAt(overview.now)),
-                size: 40,
+          Row(
+            children: [
+              Text('${o.tasksDone}', style: context.text.headlineSmall),
+              Text(
+                ' / ${o.taskCount} done',
+                style: context.text.bodyMedium?.copyWith(color: t.muted),
               ),
-              title: Text(
-                e.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              const Spacer(),
+              StatusPill(
+                label: '${(o.taskProgress * 100).round()}%',
+                color: context.isDark ? context.highlight : inkOnHighlight,
               ),
-              subtitle: Text(
-                '${formatShortDate(e.dueDate!)} · ${relativeDay(e.dueDate!, now: overview.now)}',
-                style: TextStyle(
-                  color: e.statusAt(overview.now) == PaymentStatus.overdue
-                      ? StatusColors.danger
-                      : scheme.onSurfaceVariant,
+            ],
+          ),
+          const SizedBox(height: 12),
+          ProgressBar(
+            value: o.taskProgress,
+            color: context.isDark ? context.highlight : t.ink,
+            height: 8,
+          ),
+          const SizedBox(height: 6),
+          for (final task in o.nextTasks.take(3))
+            Pressable(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                ref.read(taskDaoProvider).update(task.toggled(DateTime.now()));
+              },
+              child: Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: priorityColor(task.priority),
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        task.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.text.bodyMedium,
+                      ),
+                    ),
+                    if (task.dueDate != null)
+                      Text(
+                        relativeDay(task.dueDate!, now: o.now),
+                        style: context.text.labelMedium?.copyWith(
+                          color: task.isOverdue(o.now)
+                              ? legibleStatus(StatusColors.danger, context)
+                              : t.muted,
+                        ),
+                      ),
+                  ],
                 ),
-              ),
-              trailing: Text(
-                money.short(e.outstanding),
-                style: Theme.of(context).textTheme.titleSmall,
               ),
             ),
         ],
@@ -589,127 +814,113 @@ class _UpcomingPayments extends ConsumerWidget {
   }
 }
 
-class _TaskSummary extends ConsumerWidget {
-  const _TaskSummary({required this.overview});
+class _Guests extends StatelessWidget {
+  const _Guests({required this.o, required this.onOpen});
 
-  final EventOverview overview;
+  final EventOverview o;
+  final OpenSection onOpen;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
-    if (overview.taskCount == 0) {
-      return const Card(
-        child: Padding(
-          padding: EdgeInsets.all(20),
-          child: Text('No tasks yet. Build a checklist so nothing slips.'),
-        ),
-      );
-    }
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    final attending = o.guests
+        .where((g) => g.rsvp == RsvpStatus.attending)
+        .toList();
+    final shown = (attending.isNotEmpty ? attending : o.guests)
+        .take(5)
+        .toList();
+    final awaiting =
+        o.rsvpCount(RsvpStatus.pending) + o.rsvpCount(RsvpStatus.maybe);
+    return Panel(
+      onTap: () => onOpen(EventSection.people, people: PeopleView.guests),
+      child: o.guests.isEmpty
+          ? Text(
+              'No guests yet. Add people to track RSVPs and headcount.',
+              style: context.text.bodyMedium?.copyWith(color: t.muted),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Text(
-                    '${overview.tasksDone} of ${overview.taskCount} done',
-                    style: text.titleSmall,
+                SizedBox(
+                  height: 50,
+                  child: Row(
+                    children: [
+                      for (final g in shown)
+                        Align(
+                          widthFactor: 0.78,
+                          child: InitialsAvatar(
+                            name: g.name,
+                            size: 50,
+                            ring: t.card,
+                          ),
+                        ),
+                      if (o.guests.length > shown.length)
+                        Align(
+                          widthFactor: 0.78,
+                          child: Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: t.track,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: t.card, width: 2.5),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              '+${o.guests.length - shown.length}',
+                              style: context.text.labelLarge,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-                Text(
-                  '${(overview.taskProgress * 100).round()}%',
-                  style: text.titleSmall?.copyWith(color: scheme.primary),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _Count(value: o.headcount, label: 'Headcount'),
+                    ),
+                    Expanded(
+                      child: _Count(
+                        value: o.rsvpCount(RsvpStatus.attending),
+                        label: 'Attending',
+                      ),
+                    ),
+                    Expanded(
+                      child: _Count(value: awaiting, label: 'Awaiting'),
+                    ),
+                    Expanded(
+                      child: _Count(
+                        value: o.vendorsBooked,
+                        label: 'Vendors booked',
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            ProgressBar(value: overview.taskProgress, color: scheme.primary),
-            const SizedBox(height: 4),
-            for (final t in overview.nextTasks.take(3))
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                leading: Icon(
-                  Icons.radio_button_unchecked_rounded,
-                  color: priorityColor(t.priority),
-                ),
-                title: Text(
-                  t.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                trailing: t.dueDate == null
-                    ? null
-                    : Text(
-                        relativeDay(t.dueDate!, now: overview.now),
-                        style: text.labelMedium?.copyWith(
-                          color: t.isOverdue(overview.now)
-                              ? StatusColors.danger
-                              : scheme.onSurfaceVariant,
-                        ),
-                      ),
-              ),
-          ],
-        ),
-      ),
     );
   }
 }
 
-class _PeopleSummary extends StatelessWidget {
-  const _PeopleSummary({required this.overview, required this.onOpenTab});
+class _Count extends StatelessWidget {
+  const _Count({required this.value, required this.label});
 
-  final EventOverview overview;
-  final ValueChanged<int> onOpenTab;
+  final int value;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: StatTile(
-                label: 'Headcount',
-                value: '${overview.headcount}',
-                icon: Icons.groups_rounded,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: StatTile(
-                label: 'Attending',
-                value: '${overview.rsvpCount(RsvpStatus.attending)}',
-                icon: Icons.check_circle_outline_rounded,
-                color: StatusColors.success,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: StatTile(
-                label: 'Awaiting',
-                value:
-                    '${overview.rsvpCount(RsvpStatus.pending) + overview.rsvpCount(RsvpStatus.maybe)}',
-                icon: Icons.hourglass_bottom_rounded,
-                color: StatusColors.warning,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Card(
-          child: ListTile(
-            onTap: () => onOpenTab(EventTabs.vendors),
-            leading: const Icon(Icons.storefront_outlined),
-            title: Text(
-              '${overview.vendorsBooked} of ${overview.vendors.length} vendors booked',
-            ),
-            trailing: const Icon(Icons.chevron_right_rounded),
-          ),
+        Text('$value', style: context.text.titleLarge),
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: context.text.labelSmall?.copyWith(color: context.tokens.muted),
         ),
       ],
     );

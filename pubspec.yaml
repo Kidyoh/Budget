@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+version: 1.1.0+2
 
 environment:
   sdk: ^3.13.5
@@ -44,6 +44,7 @@ dependencies:
   image_picker: ^1.2.4
   url_launcher: ^6.3.3
   share_plus: ^13.3.1
+  flutter_animate: ^4.5.2
 
 dev_dependencies:
   flutter_test:
@@ -56,6 +57,8 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   sqflite_common_ffi: ^2.4.3
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.8
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -67,6 +70,23 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  fonts:
+    - family: PlusJakartaSans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans-w400.ttf
+          weight: 400
+        - asset: assets/fonts/PlusJakartaSans-w500.ttf
+          weight: 500
+        - asset: assets/fonts/PlusJakartaSans-w600.ttf
+          weight: 600
+        - asset: assets/fonts/PlusJakartaSans-w700.ttf
+          weight: 700
+        - asset: assets/fonts/PlusJakartaSans-w800.ttf
+          weight: 800
+
+  assets:
+    - assets/fonts/OFL.txt
 
   # To add assets to your application, add an assets section, like this:
   # assets:

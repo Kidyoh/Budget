@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/design.dart';
 import '../../core/money.dart';
 import '../../core/palette.dart';
 import '../../core/widgets/common.dart';
@@ -30,6 +31,7 @@ class SettingsScreen extends ConsumerWidget {
           onChanged: (v) => Navigator.pop(context, v),
           child: ListView(
             controller: controller,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             children: [
               for (final c in supportedCurrencies)
                 RadioListTile<String>(
@@ -37,7 +39,7 @@ class SettingsScreen extends ConsumerWidget {
                   title: Text(c.name),
                   secondary: Text(
                     c.symbol.trim(),
-                    style: Theme.of(context).textTheme.titleMedium,
+                    style: context.text.titleMedium,
                   ),
                   subtitle: Text(c.code),
                 ),
@@ -49,6 +51,46 @@ class SettingsScreen extends ConsumerWidget {
     if (code != null) {
       await ref.read(settingsProvider.notifier).setCurrency(code);
     }
+  }
+
+  Future<void> _editName(
+    BuildContext context,
+    WidgetRef ref,
+    String current,
+  ) async {
+    final controller = TextEditingController(text: current);
+    final name = await showFormSheet<String>(
+      context,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Your name', style: context.text.titleLarge),
+          const SizedBox(height: 6),
+          Text(
+            'Used to greet you on the home screen. Stays on this device.',
+            style: context.text.bodyMedium?.copyWith(
+              color: context.tokens.muted,
+            ),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: controller,
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+            decoration: const InputDecoration(labelText: 'First name'),
+            onSubmitted: (v) => Navigator.pop(context, v),
+          ),
+          const SizedBox(height: 20),
+          Builder(
+            builder: (context) => FilledButton(
+              onPressed: () => Navigator.pop(context, controller.text),
+              child: const Text('Save'),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (name != null) await ref.read(settingsProvider.notifier).setName(name);
   }
 
   Future<void> _deleteAll(BuildContext context, WidgetRef ref) async {
@@ -68,76 +110,127 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
     final controller = ref.read(settingsProvider.notifier);
-    final text = Theme.of(context).textTheme;
+    final t = context.tokens;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 12),
+          child: Center(
+            child: CircleButton(
+              icon: Icons.arrow_back_rounded,
+              tooltip: 'Back',
+              onTap: () => Navigator.maybePop(context),
+            ),
+          ),
+        ),
+        leadingWidth: 64,
+        title: const Text('Settings'),
+      ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        padding: const EdgeInsets.fromLTRB(Insets.page, 8, Insets.page, 40),
         children: [
+          Panel(
+            onTap: () => _editName(context, ref, settings.name),
+            child: Row(
+              children: [
+                settings.name.isEmpty
+                    ? Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: context.highlight,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.person_rounded,
+                          color: inkOnHighlight,
+                        ),
+                      )
+                    : InitialsAvatar(name: settings.name, size: 56),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        settings.name.isEmpty ? 'Add your name' : settings.name,
+                        style: context.text.titleMedium,
+                      ),
+                      Text(
+                        'Shown in the home screen greeting',
+                        style: context.text.bodySmall?.copyWith(color: t.muted),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.edit_outlined, color: t.muted, size: 20),
+              ],
+            ),
+          ).enter(),
           const SectionHeader('Appearance'),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Theme', style: text.titleSmall),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: SegmentedButton<ThemeMode>(
-                      segments: const [
-                        ButtonSegment(
-                          value: ThemeMode.system,
-                          label: Text('System'),
-                          icon: Icon(Icons.brightness_auto_outlined),
-                        ),
-                        ButtonSegment(
-                          value: ThemeMode.light,
-                          label: Text('Light'),
-                          icon: Icon(Icons.light_mode_outlined),
-                        ),
-                        ButtonSegment(
-                          value: ThemeMode.dark,
-                          label: Text('Dark'),
-                          icon: Icon(Icons.dark_mode_outlined),
-                        ),
-                      ],
-                      selected: {settings.themeMode},
-                      showSelectedIcon: false,
-                      onSelectionChanged: (s) =>
-                          controller.setThemeMode(s.first),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Text('Accent colour', style: text.titleSmall),
-                  const SizedBox(height: 10),
-                  ColorSwatchPicker(
-                    colors: accentPalette,
-                    selected: settings.seedColor,
-                    onChanged: (c) {
-                      if (c != null) controller.setSeedColor(c);
-                    },
-                  ),
-                ],
-              ),
+          Panel(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Theme', style: context.text.titleSmall),
+                const SizedBox(height: 12),
+                PillTabs<ThemeMode>(
+                  values: const [
+                    ThemeMode.system,
+                    ThemeMode.light,
+                    ThemeMode.dark,
+                  ],
+                  labelOf: (m) => switch (m) {
+                    ThemeMode.system => 'System',
+                    ThemeMode.light => 'Light',
+                    ThemeMode.dark => 'Dark',
+                  },
+                  selected: settings.themeMode,
+                  onChanged: controller.setThemeMode,
+                ),
+                const SizedBox(height: 22),
+                Text('Highlight colour', style: context.text.titleSmall),
+                const SizedBox(height: 12),
+                ColorSwatchPicker(
+                  colors: highlightPalette,
+                  selected: settings.highlight,
+                  onChanged: (c) {
+                    if (c != null) controller.setHighlight(c);
+                  },
+                ),
+              ],
             ),
-          ),
+          ).enter(1),
           const SectionHeader('Money'),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.payments_outlined),
-              title: const Text('Currency'),
-              subtitle: Text(
-                '${settings.currency.name} (${settings.currency.code})',
-              ),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () => _pickCurrency(context, ref, settings.currencyCode),
+          Panel(
+            onTap: () => _pickCurrency(context, ref, settings.currencyCode),
+            child: Row(
+              children: [
+                IconBadge(
+                  icon: Icons.payments_outlined,
+                  color: context.highlight,
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Currency', style: context.text.titleSmall),
+                      Text(
+                        '${settings.currency.name} (${settings.currency.code})',
+                        style: context.text.bodySmall?.copyWith(color: t.muted),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right_rounded, color: t.faint),
+              ],
             ),
-          ),
+          ).enter(2),
           const SectionHeader('Data'),
-          Card(
+          Panel(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             child: Column(
               children: [
                 ListTile(
@@ -155,15 +248,21 @@ class SettingsScreen extends ConsumerWidget {
                   },
                 ),
                 ListTile(
+                  leading: const Icon(Icons.slideshow_outlined),
+                  title: const Text('Show the welcome screens'),
+                  onTap: () {
+                    controller.setOnboarded(false);
+                    Navigator.popUntil(context, (r) => r.isFirst);
+                  },
+                ),
+                ListTile(
                   leading: Icon(
                     Icons.delete_forever_outlined,
-                    color: Theme.of(context).colorScheme.error,
+                    color: context.colors.error,
                   ),
                   title: Text(
                     'Delete all data',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
+                    style: TextStyle(color: context.colors.error),
                   ),
                   subtitle: const Text(
                     'Everything is stored only on this device.',
@@ -172,14 +271,12 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 24),
+          ).enter(3),
+          const SizedBox(height: 28),
           Center(
             child: Text(
-              'Event Budget · v1.0.0',
-              style: text.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+              'Event Budget · v1.1.0',
+              style: context.text.bodySmall?.copyWith(color: t.faint),
             ),
           ),
         ],

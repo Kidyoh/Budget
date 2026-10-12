@@ -178,22 +178,16 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
         : null;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isNew ? 'New expense' : 'Edit expense'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: FilledButton(
-              onPressed: _saving ? null : _save,
-              child: const Text('Save'),
-            ),
-          ),
-        ],
+      appBar: pageBar(
+        context,
+        title: _isNew ? 'New expense' : 'Edit expense',
+        actions: [BarButton(label: 'Save', onPressed: _saving ? null : _save)],
+        close: true,
       ),
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
           children: [
             TextFormField(
               controller: _title,
@@ -226,10 +220,10 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
                     value: c.category.id,
                     child: Row(
                       children: [
-                        Icon(
-                          categoryIcon(c.category.iconKey),
-                          size: 20,
+                        IconBadge(
+                          icon: categoryIcon(c.category.iconKey),
                           color: Color(c.category.colorValue),
+                          size: 30,
                         ),
                         const SizedBox(width: 10),
                         Expanded(

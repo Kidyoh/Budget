@@ -1,8 +1,30 @@
 # Event Budget
 
 A Flutter app for planning events and keeping their budgets under control. It
-targets Android and iOS, uses a Material 3 design with light and dark themes,
-and stores everything locally on the device (SQLite).
+targets Android and iOS and stores everything locally on the device (SQLite).
+
+## Design
+
+The look is a bold "fintech" style: an electric lime highlight with
+near-black, a soft grey page in light mode and a black one in dark mode.
+
+- **Type:** Plus Jakarta Sans, bundled in `assets/fonts` under the SIL Open Font
+  License.
+- **Shapes:** very rounded cards, a dark "bank card" hero showing the remaining
+  budget, and white circular icon buttons.
+- **Numbers:** big amounts with smaller decimals that count up when they change.
+- **Navigation:** a floating dark pill bar inside each event. The lime "+" next
+  to it adds whatever fits the current section.
+- **Charts:** stacked lime and black bars, with hatched stripes for budget that
+  is allocated but not yet spent.
+- **Onboarding:** full-bleed colour pages, a custom app icon, and a native
+  splash screen.
+- **Motion:** staggered entrance animations, soft page transitions, haptics, and
+  an animated check when a task is done.
+
+The design tokens live in `lib/core/design.dart` and the theme in
+`lib/core/theme.dart`. You can pick the highlight colour and light or dark mode
+in Settings.
 
 ## Features
 
@@ -65,6 +87,22 @@ test/                      model, database (real SQLite via FFI) and widget test
 The DAOs write to SQLite and then bump `dataRevisionProvider`. Every query
 provider watches that counter, so any write refreshes whatever is on screen.
 The screens never need to invalidate providers by hand.
+
+## Screenshots for design review
+
+`test/screenshots` walks through onboarding, the home screen and every section
+of an event in light and dark mode, and saves a PNG of each screen:
+
+```sh
+SCREENSHOT_DIR=/tmp/shots flutter test test/screenshots
+```
+
+## Regenerating the icon and splash
+
+```sh
+dart run flutter_launcher_icons
+dart run flutter_native_splash:create
+```
 
 ## Tests
 

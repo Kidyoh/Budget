@@ -46,7 +46,7 @@ class _VendorsTabState extends ConsumerState<VendorsTab> {
             : vendors.where((v) => v.vendor.status == _filter).toList();
 
         return ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 104),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
           children: [
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -107,7 +107,7 @@ class _VendorCard extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  IconBadge(icon: Icons.storefront_rounded, color: statusColor),
+                  InitialsAvatar(name: v.name, size: 46),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -165,29 +165,41 @@ class _VendorCard extends ConsumerWidget {
               if (v.phone.isNotEmpty ||
                   v.email.isNotEmpty ||
                   v.website.isNotEmpty) ...[
-                const SizedBox(height: 4),
+                const SizedBox(height: 12),
                 Row(
                   children: [
                     if (v.phone.isNotEmpty)
-                      IconButton(
-                        tooltip: 'Call',
-                        onPressed: () =>
-                            launchContact(context, phoneUri(v.phone)),
-                        icon: const Icon(Icons.call_outlined),
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: CircleButton(
+                          tooltip: 'Call',
+                          size: 40,
+                          icon: Icons.call_outlined,
+                          onTap: () =>
+                              launchContact(context, phoneUri(v.phone)),
+                        ),
                       ),
                     if (v.email.isNotEmpty)
-                      IconButton(
-                        tooltip: 'Email',
-                        onPressed: () =>
-                            launchContact(context, emailUri(v.email)),
-                        icon: const Icon(Icons.mail_outline),
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: CircleButton(
+                          tooltip: 'Email',
+                          size: 40,
+                          icon: Icons.mail_outline,
+                          onTap: () =>
+                              launchContact(context, emailUri(v.email)),
+                        ),
                       ),
                     if (v.website.isNotEmpty)
-                      IconButton(
-                        tooltip: 'Website',
-                        onPressed: () =>
-                            launchContact(context, webUri(v.website)),
-                        icon: const Icon(Icons.language),
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: CircleButton(
+                          tooltip: 'Website',
+                          size: 40,
+                          icon: Icons.language,
+                          onTap: () =>
+                              launchContact(context, webUri(v.website)),
+                        ),
                       ),
                   ],
                 ),

@@ -114,20 +114,19 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       },
       child: Scaffold(
         backgroundColor: background,
-        appBar: AppBar(
-          backgroundColor: background,
+        appBar: pageBar(
+          context,
+          background: background,
           actions: [
-            IconButton(
+            CircleButton(
               tooltip: _pinned ? 'Unpin' : 'Pin',
-              icon: Icon(
-                _pinned ? Icons.push_pin_rounded : Icons.push_pin_outlined,
-              ),
-              onPressed: () => setState(() => _pinned = !_pinned),
+              icon: _pinned ? Icons.push_pin_rounded : Icons.push_pin_outlined,
+              onTap: () => setState(() => _pinned = !_pinned),
             ),
-            IconButton(
+            CircleButton(
               tooltip: 'Colour',
-              icon: const Icon(Icons.palette_outlined),
-              onPressed: () => showModalBottomSheet<void>(
+              icon: Icons.palette_outlined,
+              onTap: () => showModalBottomSheet<void>(
                 context: context,
                 builder: (context) => Padding(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
@@ -143,10 +142,10 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                 ),
               ),
             ),
-            IconButton(
+            CircleButton(
               tooltip: 'Delete',
-              icon: const Icon(Icons.delete_outline_rounded),
-              onPressed: _delete,
+              icon: Icons.delete_outline_rounded,
+              onTap: _delete,
             ),
           ],
         ),

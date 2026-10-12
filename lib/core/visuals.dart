@@ -48,13 +48,13 @@ IconData paymentMethodIcon(PaymentMethod method) => switch (method) {
   PaymentMethod.other => Icons.more_horiz_rounded,
 };
 
-/// Semantic colours that read well in light and dark themes.
+/// Semantic colours, tuned to sit next to the lime highlight.
 class StatusColors {
-  static const success = Color(0xFF2E7D32);
-  static const warning = Color(0xFFEF6C00);
-  static const danger = Color(0xFFC62828);
-  static const info = Color(0xFF0B57D0);
-  static const neutral = Color(0xFF607D8B);
+  static const success = Color(0xFF1F9D63);
+  static const warning = Color(0xFFE08A00);
+  static const danger = Color(0xFFEB5545);
+  static const info = Color(0xFF6E6AE8);
+  static const neutral = Color(0xFF8A8D91);
 }
 
 Color paymentStatusColor(PaymentStatus status) => switch (status) {
@@ -92,7 +92,8 @@ Color eventStatusColor(EventStatus status) => switch (status) {
   EventStatus.cancelled => StatusColors.danger,
 };
 
-/// Colour for a budget usage bar: calm until 85%, amber to 100%, red beyond.
+/// Colour for a budget usage bar: the highlight until 85%, amber to 100%,
+/// red beyond.
 Color usageColor(double fraction, ColorScheme scheme) {
   if (fraction > 1.0001) return StatusColors.danger;
   if (fraction >= 0.85) return StatusColors.warning;

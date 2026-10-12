@@ -3,9 +3,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/design.dart';
 import '../../core/formatters.dart';
 import '../../core/id.dart';
 import '../../core/visuals.dart';
+import '../../core/widgets/charts.dart';
 import '../../core/widgets/common.dart';
 import '../../core/widgets/fields.dart';
 import '../../data/models/models.dart';
@@ -66,7 +68,7 @@ class ExpenseDetailScreen extends ConsumerWidget {
     final expense = expenseValue.value;
     if (expense == null) {
       return Scaffold(
-        appBar: AppBar(),
+        appBar: pageBar(context, title: ''),
         body: expenseValue.isLoading
             ? const Center(child: CircularProgressIndicator())
             : const EmptyState(
@@ -96,32 +98,30 @@ class ExpenseDetailScreen extends ConsumerWidget {
     final text = Theme.of(context).textTheme;
     final now = DateTime.now();
     final status = expense.statusAt(now);
-    final paidFraction = expense.amount <= 0
-        ? 1.0
-        : expense.paidAmount / expense.amount;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Expense'),
+      appBar: pageBar(
+        context,
+        title: 'Expense',
         actions: [
-          IconButton(
+          CircleButton(
             tooltip: 'Edit',
-            icon: const Icon(Icons.edit_outlined),
-            onPressed: () => openExpenseForm(
+            icon: Icons.edit_outlined,
+            onTap: () => openExpenseForm(
               context,
               eventId: expense.eventId,
               expense: expense,
             ),
           ),
-          IconButton(
+          CircleButton(
             tooltip: 'Delete',
-            icon: const Icon(Icons.delete_outline_rounded),
-            onPressed: () => _delete(context, ref, expense),
+            icon: Icons.delete_outline_rounded,
+            onTap: () => _delete(context, ref, expense),
           ),
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
           Card(
             child: Padding(
@@ -141,12 +141,16 @@ class ExpenseDetailScreen extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Text(money.format(expense.amount), style: text.displaySmall),
+                  BigAmount(expense.amount, style: text.displaySmall),
                   const SizedBox(height: 14),
-                  ProgressBar(
-                    value: paidFraction,
-                    color: paymentStatusColor(status),
-                    height: 10,
+                  SpendBar(
+                    paid: expense.paidAmount.clamp(0, expense.amount),
+                    unpaid: 0,
+                    budget: expense.amount,
+                    paidColor: context.isDark ? context.highlight : heroInk,
+                    unpaidColor: context.highlight,
+                    hatchColor: context.tokens.faint,
+                    height: 12,
                   ),
                   const SizedBox(height: 8),
                   Row(
@@ -175,7 +179,7 @@ class ExpenseDetailScreen extends ConsumerWidget {
                             onPressed: () =>
                                 showPaymentSheet(context, ref, expense),
                             icon: const Icon(Icons.add_card_rounded),
-                            label: const Text('Record payment'),
+                            label: const Text('Pay'),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -183,7 +187,7 @@ class ExpenseDetailScreen extends ConsumerWidget {
                           child: OutlinedButton.icon(
                             onPressed: () => _markPaid(ref, expense),
                             icon: const Icon(Icons.done_all_rounded),
-                            label: const Text('Mark paid'),
+                            label: const Text('Settle'),
                           ),
                         ),
                       ],
@@ -322,7 +326,7 @@ class ExpenseDetailScreen extends ConsumerWidget {
           appBar: AppBar(
             backgroundColor: Colors.black,
             foregroundColor: Colors.white,
-            title: const Text('Receipt'),
+            title: const Text('Receipt', style: TextStyle(color: Colors.white)),
           ),
           body: InteractiveViewer(
             maxScale: 5,

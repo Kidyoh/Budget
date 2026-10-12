@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/design.dart';
 import '../../core/formatters.dart';
 import '../../core/widgets/common.dart';
 import '../../data/models/models.dart';
@@ -50,7 +51,7 @@ class _NotesTabState extends ConsumerState<NotesTab> {
         return CustomScrollView(
           slivers: [
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
               sliver: SliverToBoxAdapter(
                 child: TextField(
                   decoration: const InputDecoration(
@@ -68,7 +69,7 @@ class _NotesTabState extends ConsumerState<NotesTab> {
               )
             else
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 104),
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
                 sliver: SliverGrid.builder(
                   gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                     maxCrossAxisExtent: 240,
@@ -128,7 +129,7 @@ class _NoteCard extends StatelessWidget {
                     Icon(
                       Icons.push_pin_rounded,
                       size: 16,
-                      color: scheme.primary,
+                      color: context.tokens.ink,
                     ),
                 ],
               ),

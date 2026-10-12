@@ -5,6 +5,7 @@ import '../../core/id.dart';
 import '../../core/palette.dart';
 import '../../core/visuals.dart';
 import '../../core/widgets/fields.dart';
+import '../../core/widgets/common.dart';
 import '../../data/budget_templates.dart';
 import '../../data/models/models.dart';
 import '../../state/providers.dart';
@@ -104,22 +105,16 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isNew ? 'New event' : 'Edit event'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: FilledButton(
-              onPressed: _saving ? null : _save,
-              child: const Text('Save'),
-            ),
-          ),
-        ],
+      appBar: pageBar(
+        context,
+        title: _isNew ? 'New event' : 'Edit event',
+        actions: [BarButton(label: 'Save', onPressed: _saving ? null : _save)],
+        close: true,
       ),
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
           children: [
             TextFormField(
               controller: _name,

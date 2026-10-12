@@ -21,7 +21,7 @@ Future<String> insertSampleEvent(AppDatabase database, {DateTime? now}) async {
     location: 'Lakeside Garden Venue',
     description: 'Garden ceremony at 3pm followed by dinner and dancing.',
     totalBudget: 25000,
-    colorValue: accentPalette[6],
+    colorValue: accentPalette[0],
     createdAt: today,
     updatedAt: today,
   );

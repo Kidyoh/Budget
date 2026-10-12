@@ -53,7 +53,7 @@ class CategoryDetailScreen extends ConsumerWidget {
 
     if (data == null) {
       return Scaffold(
-        appBar: AppBar(),
+        appBar: pageBar(context, title: ''),
         body: categories == null
             ? const Center(child: CircularProgressIndicator())
             : const EmptyState(
@@ -67,19 +67,20 @@ class CategoryDetailScreen extends ConsumerWidget {
     final color = Color(c.colorValue);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(c.name),
+      appBar: pageBar(
+        context,
+        title: c.name,
         actions: [
-          IconButton(
+          CircleButton(
             tooltip: 'Edit category',
-            icon: const Icon(Icons.edit_outlined),
-            onPressed: () =>
+            icon: Icons.edit_outlined,
+            onTap: () =>
                 showCategoryForm(context, ref, eventId: eventId, category: c),
           ),
-          IconButton(
+          CircleButton(
             tooltip: 'Delete category',
-            icon: const Icon(Icons.delete_outline_rounded),
-            onPressed: () => _delete(context, ref, data),
+            icon: Icons.delete_outline_rounded,
+            onTap: () => _delete(context, ref, data),
           ),
         ],
       ),
@@ -90,7 +91,7 @@ class CategoryDetailScreen extends ConsumerWidget {
         label: const Text('Expense'),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 104),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
         children: [
           Card(
             child: Padding(

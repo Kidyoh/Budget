@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/contact_actions.dart';
-import '../../core/formatters.dart';
 import '../../core/visuals.dart';
 import '../../core/widgets/common.dart';
 import '../../data/models/models.dart';
@@ -55,7 +54,7 @@ class _GuestsTabState extends ConsumerState<GuestsTab> {
         }).toList();
 
         return ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 104),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
           children: [
             Row(
               children: [
@@ -69,7 +68,7 @@ class _GuestsTabState extends ConsumerState<GuestsTab> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: StatTile(
-                    label: 'Headcount',
+                    label: 'Going',
                     value: '$headcount',
                     icon: Icons.groups_rounded,
                     color: StatusColors.success,
@@ -149,7 +148,6 @@ class _GuestTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
     final details = [
       if (guest.groupName.isNotEmpty) guest.groupName,
       if (guest.plusOnes > 0) '+${guest.plusOnes}',
@@ -162,11 +160,7 @@ class _GuestTile extends ConsumerWidget {
       contentPadding: const EdgeInsets.fromLTRB(14, 4, 4, 4),
       onTap: () =>
           showGuestForm(context, ref, eventId: guest.eventId, guest: guest),
-      leading: CircleAvatar(
-        backgroundColor: scheme.secondaryContainer,
-        foregroundColor: scheme.onSecondaryContainer,
-        child: Text(initials(guest.name)),
-      ),
+      leading: InitialsAvatar(name: guest.name, size: 46),
       title: Text(guest.name, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: details.isEmpty
           ? null

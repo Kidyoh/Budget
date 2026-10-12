@@ -56,6 +56,11 @@ final eventsProvider = FutureProvider<List<EventWithTotals>>((ref) {
   return ref.watch(eventDaoProvider).allWithTotals();
 });
 
+final upcomingPaymentsProvider = FutureProvider<List<ExpenseWithEvent>>((ref) {
+  ref.watch(dataRevisionProvider);
+  return ref.watch(expenseDaoProvider).upcomingAcrossEvents();
+});
+
 final eventProvider = FutureProvider.family<Event?, String>((ref, id) {
   ref.watch(dataRevisionProvider);
   return ref.watch(eventDaoProvider).byId(id);

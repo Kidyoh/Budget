@@ -183,6 +183,49 @@ class ExpenseDao extends Dao {
       write(() => db.delete('expenses', where: 'id = ?', whereArgs: [id]));
 }
 
+/// An expense with the event it belongs to, for cross-event lists.
+class ExpenseWithEvent {
+  const ExpenseWithEvent({
+    required this.expense,
+    required this.eventName,
+    required this.eventColor,
+  });
+
+  final Expense expense;
+  final String eventName;
+  final int eventColor;
+}
+
+extension UpcomingPayments on ExpenseDao {
+  /// Unpaid expenses with a due date across every event, soonest first.
+  Future<List<ExpenseWithEvent>> upcomingAcrossEvents({int limit = 6}) async {
+    final rows = await db.rawQuery(
+      '''
+      SELECT * FROM (
+        SELECT x.*, $_paidForExpense AS paid,
+          e.name AS event_name, e.color AS event_color
+        FROM expenses x
+        JOIN events e ON e.id = x.event_id
+        WHERE x.due_date IS NOT NULL AND e.status != 'cancelled'
+      )
+      WHERE amount - paid > 0.005
+      ORDER BY due_date
+      LIMIT ?
+    ''',
+      [limit],
+    );
+    return rows
+        .map(
+          (r) => ExpenseWithEvent(
+            expense: Expense.fromMap(r),
+            eventName: r['event_name'] as String,
+            eventColor: r['event_color'] as int,
+          ),
+        )
+        .toList();
+  }
+}
+
 class PaymentDao extends Dao {
   PaymentDao(super.database, super.onChanged);
 
