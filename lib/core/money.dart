@@ -52,8 +52,20 @@ class Money {
     decimalDigits: 1,
   );
 
+  late final NumberFormat _plain = NumberFormat.currency(
+    symbol: '',
+    decimalDigits: currency.decimals,
+  );
+
   /// Full precision, e.g. `$1,250.50`.
   String format(double value) => _full.format(value);
+
+  /// Full precision without the currency symbol, e.g. `1,250.50`, for
+  /// places that draw the symbol as an icon.
+  String number(double value) => _plain.format(value).trim();
+
+  /// Whether this currency has a drawn symbol icon (see `CurrencyIcon`).
+  bool get hasSymbolIcon => currency.code == 'ETB';
 
   /// Drops the cents when there are none, e.g. `$1,250`.
   String short(double value) => value == value.roundToDouble()

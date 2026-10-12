@@ -7,6 +7,7 @@ import '../design.dart';
 import '../formatters.dart';
 import '../palette.dart';
 import '../theme.dart' show fontFamily;
+import 'birr_icon.dart';
 import '../../state/settings.dart';
 
 /// Shows loading and error states for an [AsyncValue] and builds [data]
@@ -616,22 +617,31 @@ class BigAmount extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final money = ref.watch(moneyProvider);
     final base = (style ?? context.text.displaySmall!).copyWith(color: color);
+    final fg = color ?? base.color ?? context.tokens.ink;
+    final iconSize = (base.fontSize ?? 36) * 0.78;
     Widget render(double v) {
-      final text = money.format(v);
+      final useIcon = money.hasSymbolIcon;
+      final text = useIcon ? money.number(v) : money.format(v);
       final dot = text.lastIndexOf('.');
       final hasDecimals = money.currency.decimals > 0 && dot > 0;
       return Text.rich(
         TextSpan(
           children: [
+            if (useIcon)
+              WidgetSpan(
+                alignment: PlaceholderAlignment.middle,
+                child: Padding(
+                  padding: EdgeInsets.only(right: iconSize * 0.12),
+                  child: BirrIcon(size: iconSize, color: fg),
+                ),
+              ),
             TextSpan(text: hasDecimals ? text.substring(0, dot) : text),
             if (hasDecimals)
               TextSpan(
                 text: text.substring(dot),
                 style: base.copyWith(
                   fontSize: (base.fontSize ?? 36) * 0.6,
-                  color: (color ?? base.color ?? context.tokens.ink).withValues(
-                    alpha: 0.55,
-                  ),
+                  color: fg.withValues(alpha: 0.55),
                   letterSpacing: 0,
                 ),
               ),
@@ -941,8 +951,8 @@ class BarButton extends StatelessWidget {
   }
 }
 
-/// The chosen currency's symbol drawn as an icon, e.g. "Br" for the
-/// Ethiopian birr, so money visuals never default to a dollar sign.
+/// The chosen currency's symbol as an icon: the drawn birr symbol (ብ with
+/// currency bars) for Ethiopian birr, otherwise the currency's own sign.
 class CurrencyIcon extends ConsumerWidget {
   const CurrencyIcon({super.key, this.size = 24, this.color});
 
@@ -951,7 +961,9 @@ class CurrencyIcon extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final symbol = ref.watch(moneyProvider).currency.symbol.trim();
+    final money = ref.watch(moneyProvider);
+    if (money.hasSymbolIcon) return BirrIcon(size: size, color: color);
+    final symbol = money.currency.symbol.trim();
     return SizedBox.square(
       dimension: size,
       child: Center(

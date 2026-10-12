@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke="#141414" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Birr symbol: the Ethiopic letter ብ (first letter of ብር) with two currency bars -->
+  <path d="M30 83 V37 A20 20 0 0 1 70 37 V83" stroke-width="11.5"/>
+  <path d="M70 55 H90" stroke-width="11.5"/>
+  <path d="M12 47 H44 M12 61 H44" stroke-width="7"/>
+</svg>
