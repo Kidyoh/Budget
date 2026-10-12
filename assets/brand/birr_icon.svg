@@ -1,6 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke="#141414" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
-  <!-- Birr symbol: the Ethiopic letter ብ (first letter of ብር). It is the arch
-       of በ with a short stroke on the LEFT leg; on the right it would be ቡ. -->
-  <path d="M42 84 V38 A18 18 0 0 1 78 38 V84"/>
-  <path d="M42 59 H27 Q22 59 20 66"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke="#141414" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Birr symbol: the Ethiopic letter ብ (first letter of ብር). The short
+       stroke on the left leg makes በ into ብ; the two bars on the right mark
+       it as a currency. -->
+  <path d="M30 83 V37 A20 20 0 0 1 70 37 V83" stroke-width="11.5"/>
+  <path d="M30 55 H10" stroke-width="11.5"/>
+  <path d="M56 47 H88 M56 61 H88" stroke-width="7"/>
 </svg>
