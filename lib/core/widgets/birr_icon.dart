@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 /// The Ethiopian birr symbol: the Ethiopic letter ብ (the first letter of
-/// ብር, "birr") crossed by two short currency bars, drawn as vector strokes
-/// so it stays crisp at any size. Same geometry as
+/// ብር, "birr"), drawn as vector strokes so it stays crisp at any size.
+/// ብ is the arch of በ with a short stroke on the *left* leg; the same
+/// stroke on the right leg would make ቡ. Same geometry as
 /// `assets/brand/birr_icon.svg`.
 class BirrIcon extends StatelessWidget {
   const BirrIcon({super.key, this.size = 24, this.color});
@@ -35,32 +36,32 @@ class _BirrPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     // Drawn in a 100x100 box, scaled to fit.
-    final k = size.shortestSide / 100;
-    canvas.scale(k);
-    final heavy = Paint()
+    canvas.scale(size.shortestSide / 100);
+    final pen = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 11.5
+      ..strokeWidth = 12
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
-    final light = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 7
-      ..strokeCap = StrokeCap.round;
 
-    // The arch of ብ: two legs joined by a round top.
-    final arch = Path()
-      ..moveTo(30, 83)
-      ..lineTo(30, 37)
-      ..arcToPoint(const Offset(70, 37), radius: const Radius.circular(20))
-      ..lineTo(70, 83);
-    canvas.drawPath(arch, heavy);
-    // The stroke on the right leg that makes በ into ብ.
-    canvas.drawLine(const Offset(70, 55), const Offset(90, 55), heavy);
-    // Currency bars.
-    canvas.drawLine(const Offset(12, 47), const Offset(44, 47), light);
-    canvas.drawLine(const Offset(12, 61), const Offset(44, 61), light);
+    // The arch of በ: two legs joined by a round top.
+    canvas.drawPath(
+      Path()
+        ..moveTo(42, 84)
+        ..lineTo(42, 38)
+        ..arcToPoint(const Offset(78, 38), radius: const Radius.circular(18))
+        ..lineTo(78, 84),
+      pen,
+    );
+    // The stroke on the left leg that makes በ into ብ, with its small
+    // downward flick.
+    canvas.drawPath(
+      Path()
+        ..moveTo(42, 59)
+        ..lineTo(27, 59)
+        ..quadraticBezierTo(22, 59, 20, 66),
+      pen,
+    );
   }
 
   @override
