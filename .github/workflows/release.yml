@@ -2,14 +2,14 @@ name: Release
 
 # Builds the Android APKs and the Figma design pack, then publishes them as a
 # GitHub release. Runs when a version tag such as v1.3.3 is pushed, or by hand
-# from the Actions tab for an existing tag.
+# from the Actions tab: the run then creates the tag on the commit it built.
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing tag to (re)publish, e.g. v1.3.3
+        description: Release tag, e.g. v1.3.3 (created if it doesn't exist)
         required: true
 
 permissions:
@@ -26,8 +26,6 @@ jobs:
       TAG: ${{ github.event.inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.tag || github.ref }}
 
       - uses: actions/setup-java@v4
         with:
@@ -81,6 +79,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.TAG }}
+          target_commitish: ${{ github.sha }}
           name: Event Budget ${{ env.TAG }}
           body_path: docs/releases/${{ env.TAG }}.md
           files: dist/*
