@@ -97,6 +97,16 @@ of an event in light and dark mode, and saves a PNG of each screen:
 SCREENSHOT_DIR=/tmp/shots flutter test test/screenshots
 ```
 
+## Figma import pack
+
+`tool/build_figma_pack.py` renders every screen (light and dark, 1080x2340),
+copies the brand vectors and fonts, draws a style guide and overview boards,
+and zips it all for dragging into Figma:
+
+```sh
+python3 tool/build_figma_pack.py out/figma
+```
+
 ## Regenerating the icon and splash
 
 ```sh

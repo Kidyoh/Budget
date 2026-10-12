@@ -114,11 +114,25 @@ class _Header extends ConsumerWidget {
                   '${_greeting(DateTime.now())},',
                   style: context.text.bodyMedium?.copyWith(color: t.muted),
                 ),
-                Text(
-                  name.isEmpty ? 'Welcome back 👋' : '$name 👋',
-                  style: context.text.titleLarge,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        name.isEmpty ? 'Welcome back' : name,
+                        style: context.text.titleLarge,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    // An icon rather than the 👋 emoji, so it looks the
+                    // same on every phone.
+                    const Icon(
+                      Icons.waving_hand_rounded,
+                      size: 20,
+                      color: Color(0xFFF5B83D),
+                    ),
+                  ],
                 ),
               ],
             ),

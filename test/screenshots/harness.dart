@@ -54,14 +54,18 @@ Future<void> loadFonts() async {
 }
 
 /// Pumps the whole app with an in-memory database.
+///
+/// The app is laid out at the phone's logical [screen] size and drawn
+/// [scale] times larger, so screenshots come out at full device resolution
+/// (golden captures are taken at one image pixel per logical pixel).
 Future<void> pumpApp(
   WidgetTester tester, {
-  Size size = const Size(1080, 2340),
-  double ratio = 3,
+  Size screen = const Size(360, 780),
+  double scale = 3,
   Map<String, Object> prefs = const {},
 }) async {
-  tester.view.physicalSize = size;
-  tester.view.devicePixelRatio = ratio;
+  tester.view.physicalSize = screen * scale;
+  tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
 
   SharedPreferences.setMockInitialValues(prefs);
@@ -77,16 +81,55 @@ Future<void> pumpApp(
   await tester.pumpWidget(
     RepaintBoundary(
       key: _boundaryKey,
-      child: ProviderScope(
-        overrides: [
-          databaseProvider.overrideWithValue(database),
-          sharedPreferencesProvider.overrideWithValue(sharedPrefs),
-        ],
-        child: const EventBudgetApp(),
+      child: _Scaled(
+        screen: screen,
+        scale: scale,
+        child: ProviderScope(
+          overrides: [
+            databaseProvider.overrideWithValue(database),
+            sharedPreferencesProvider.overrideWithValue(sharedPrefs),
+          ],
+          child: const EventBudgetApp(),
+        ),
       ),
     ),
   );
   await settle(tester);
+}
+
+/// Lays [child] out at [screen] size with a phone-like MediaQuery, then
+/// scales it up to fill the test view.
+class _Scaled extends StatelessWidget {
+  const _Scaled({
+    required this.screen,
+    required this.scale,
+    required this.child,
+  });
+
+  final Size screen;
+  final double scale;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final media = MediaQuery.of(context).copyWith(
+      size: screen,
+      devicePixelRatio: scale,
+      padding: EdgeInsets.zero,
+      viewPadding: EdgeInsets.zero,
+    );
+    return MediaQuery(
+      data: media,
+      child: Align(
+        alignment: Alignment.topLeft,
+        child: Transform.scale(
+          scale: scale,
+          alignment: Alignment.topLeft,
+          child: SizedBox.fromSize(size: screen, child: child),
+        ),
+      ),
+    );
+  }
 }
 
 /// Lets database futures complete and animations play out. Pumps for a
