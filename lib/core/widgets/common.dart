@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../design.dart';
 import '../formatters.dart';
 import '../palette.dart';
+import '../theme.dart' show fontFamily;
 import '../../state/settings.dart';
 
 /// Shows loading and error states for an [AsyncValue] and builds [data]
@@ -181,12 +182,22 @@ class EmptyState extends StatelessWidget {
                   Positioned(
                     left: 0,
                     top: 8,
-                    child: _Orbit(icon: Icons.attach_money_rounded, t: t),
+                    child: _Orbit(
+                      t: t,
+                      child: CurrencyIcon(size: 20, color: t.ink),
+                    ),
                   ),
                   Positioned(
                     right: 0,
                     bottom: 6,
-                    child: _Orbit(icon: Icons.auto_awesome_rounded, t: t),
+                    child: _Orbit(
+                      t: t,
+                      child: Icon(
+                        Icons.auto_awesome_rounded,
+                        size: 18,
+                        color: t.ink,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -216,9 +227,9 @@ class EmptyState extends StatelessWidget {
 }
 
 class _Orbit extends StatelessWidget {
-  const _Orbit({required this.icon, required this.t});
+  const _Orbit({required this.child, required this.t});
 
-  final IconData icon;
+  final Widget child;
   final AppTokens t;
 
   @override
@@ -231,7 +242,7 @@ class _Orbit extends StatelessWidget {
         shape: BoxShape.circle,
         border: Border.all(color: t.ink, width: 1.5),
       ),
-      child: Icon(icon, size: 18, color: t.ink),
+      child: Center(child: child),
     );
   }
 }
@@ -926,6 +937,42 @@ class BarButton extends StatelessWidget {
       ),
       onPressed: onPressed,
       child: Text(label),
+    );
+  }
+}
+
+/// The chosen currency's symbol drawn as an icon, e.g. "Br" for the
+/// Ethiopian birr, so money visuals never default to a dollar sign.
+class CurrencyIcon extends ConsumerWidget {
+  const CurrencyIcon({super.key, this.size = 24, this.color});
+
+  final double size;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final symbol = ref.watch(moneyProvider).currency.symbol.trim();
+    return SizedBox.square(
+      dimension: size,
+      child: Center(
+        child: Padding(
+          padding: EdgeInsets.all(size * 0.06),
+          child: FittedBox(
+            child: Text(
+              symbol,
+              maxLines: 1,
+              style: TextStyle(
+                fontFamily: fontFamily,
+                fontWeight: FontWeight.w800,
+                fontSize: size * 0.62,
+                height: 1,
+                letterSpacing: -size * 0.03,
+                color: color ?? IconTheme.of(context).color,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

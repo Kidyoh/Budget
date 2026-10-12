@@ -51,7 +51,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     ),
     const _Page(
       background: Color(0xFFB8B5FA),
-      before: 'Every dollar\n',
+      before: 'Every birr\n',
       after: ' in its\nright place',
       body: 'Split your budget, log expenses, pay in instalments and never miss a due date.',
       art: _MoneyArt(),
@@ -353,7 +353,12 @@ class _Bubble extends StatelessWidget {
     this.delay = 0,
   });
 
-  final IconData icon;
+  /// Shows the currency symbol (e.g. "Br") instead of an icon.
+  const _Bubble.currency({this.size = 52, this.delay = 0})
+    : icon = null,
+      filled = false;
+
+  final IconData? icon;
   final double size;
   final bool filled;
   final int delay;
@@ -368,11 +373,15 @@ class _Bubble extends StatelessWidget {
             shape: BoxShape.circle,
             border: Border.all(color: _ink, width: 2),
           ),
-          child: Icon(
-            icon,
-            color: filled ? Colors.white : _ink,
-            size: size * 0.46,
-          ),
+          child: icon == null
+              ? Center(
+                  child: CurrencyIcon(size: size * 0.56, color: _ink),
+                )
+              : Icon(
+                  icon,
+                  color: filled ? Colors.white : _ink,
+                  size: size * 0.46,
+                ),
         )
         .animate(onPlay: (c) => c.repeat(reverse: true))
         .moveY(
@@ -443,18 +452,18 @@ class _PlanArt extends StatelessWidget {
         Positioned(
           right: 26,
           bottom: 24,
-          child: _Bubble(Icons.attach_money_rounded, size: 44, delay: 300),
+          child: _Bubble.currency(size: 44, delay: 300),
         ),
       ],
     );
   }
 }
 
-class _MoneyArt extends StatelessWidget {
+class _MoneyArt extends ConsumerWidget {
   const _MoneyArt();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return _ArtFrame(
       children: [
         Container(
@@ -490,7 +499,7 @@ class _MoneyArt extends StatelessWidget {
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
-                      r'$25,000',
+                      ref.watch(moneyProvider).short(25000),
                       style: context.text.labelLarge?.copyWith(
                         color: Colors.white,
                       ),

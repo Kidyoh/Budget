@@ -10,10 +10,10 @@ class Currency {
 }
 
 const List<Currency> supportedCurrencies = [
+  Currency('ETB', 'Br ', 'Ethiopian Birr'),
   Currency('USD', r'$', 'US Dollar'),
   Currency('EUR', '€', 'Euro'),
   Currency('GBP', '£', 'British Pound'),
-  Currency('ETB', 'Br ', 'Ethiopian Birr'),
   Currency('KES', 'KSh ', 'Kenyan Shilling'),
   Currency('NGN', '₦', 'Nigerian Naira'),
   Currency('ZAR', 'R ', 'South African Rand'),

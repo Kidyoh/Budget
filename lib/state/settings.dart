@@ -9,7 +9,7 @@ class AppSettings {
   const AppSettings({
     this.themeMode = ThemeMode.system,
     this.highlight = defaultHighlight,
-    this.currencyCode = 'USD',
+    this.currencyCode = 'ETB',
     this.name = '',
     this.onboarded = false,
   });
@@ -74,7 +74,7 @@ class SettingsController extends Notifier<AppSettings> {
       highlight: highlightPalette.contains(highlight)
           ? highlight!
           : defaultHighlight,
-      currencyCode: prefs.getString(currencyKey) ?? 'USD',
+      currencyCode: prefs.getString(currencyKey) ?? 'ETB',
       name: prefs.getString(nameKey) ?? '',
       onboarded: prefs.getBool(onboardedKey) ?? false,
     );

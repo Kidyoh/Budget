@@ -388,11 +388,7 @@ class _StatCards extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _CardChip(
-                    icon: Icons.payments_outlined,
-                    label: 'Paid',
-                    dark: true,
-                  ),
+                  const _CardChip(label: 'Paid', dark: true),
                   const SizedBox(height: 14),
                   BigAmount(
                     o.paid,
@@ -434,13 +430,10 @@ class _StatCards extends ConsumerWidget {
 }
 
 class _CardChip extends StatelessWidget {
-  const _CardChip({
-    required this.icon,
-    required this.label,
-    required this.dark,
-  });
+  const _CardChip({this.icon, required this.label, required this.dark});
 
-  final IconData icon;
+  /// Null shows the currency symbol instead.
+  final IconData? icon;
   final String label;
   final bool dark;
 
@@ -456,7 +449,9 @@ class _CardChip extends StatelessWidget {
             shape: BoxShape.circle,
             border: Border.all(color: fg.withValues(alpha: 0.5)),
           ),
-          child: Icon(icon, size: 16, color: fg),
+          child: icon == null
+              ? Center(child: CurrencyIcon(size: 18, color: fg))
+              : Icon(icon, size: 16, color: fg),
         ),
         const SizedBox(width: 8),
         Flexible(

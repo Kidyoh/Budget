@@ -207,9 +207,16 @@ class SettingsScreen extends ConsumerWidget {
             onTap: () => _pickCurrency(context, ref, settings.currencyCode),
             child: Row(
               children: [
-                IconBadge(
-                  icon: Icons.payments_outlined,
-                  color: context.highlight,
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: context.highlight,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(
+                    child: CurrencyIcon(size: 26, color: inkOnHighlight),
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
